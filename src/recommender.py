@@ -67,14 +67,14 @@ def load_songs(csv_path: str) -> List[Dict]:
     return songs
 
 def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
-        """Score a song against user preferences."""
+    """Score a song against user preferences."""
     score = 0.0
     reasons = []
 
     # --- Tier 1: Genre (binary) ---
     if song["genre"] == user_prefs["genre"]:
-        score += 2.5
-        reasons.append("genre match (+2.5)")
+        score += 1.25
+        reasons.append("genre match (+1.25)")
     else:
         reasons.append(f"genre miss: {song['genre']} != {user_prefs['genre']} (+0.0)")
 
@@ -87,7 +87,7 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
 
     # --- Tier 1: Energy proximity (continuous) ---
     energy_gap = abs(song["energy"] - user_prefs["energy"])
-    energy_contribution = (1.0 - energy_gap) * 1.5
+    energy_contribution = (1.0 - energy_gap) * 3.0
     score += energy_contribution
     reasons.append(f"energy proximity (+{energy_contribution:.2f})")
 

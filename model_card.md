@@ -2,110 +2,52 @@
 
 ## 1. Model Name  
 
-Give your model a short, descriptive name.  
-Example: **VibeFinder 1.0**  
+**VibeMatch 1.0**
 
 ---
 
 ## 2. Intended Use  
 
-Describe what your recommender is designed to do and who it is for. 
-
-Prompts:  
-
-- What kind of recommendations does it generate  
-- What assumptions does it make about the user  
-- Is this for real users or classroom exploration  
+VibeMatch takes a genre, mood, and energy preference and returns the 5 closest songs from a 19-song catalog. You tell it what you like — no history, no account needed. It is a classroom simulation, not a real product. It should not be used on a larger catalog without reworking the weights.
 
 ---
 
 ## 3. How the Model Works  
 
-Explain your scoring approach in simple language.  
-
-Prompts:  
-
-- What features of each song are used (genre, energy, mood, etc.)  
-- What user preferences are considered  
-- How does the model turn those into a score  
-- What changes did you make from the starter logic  
-
-Avoid code here. Pretend you are explaining the idea to a friend who does not program.
+Every song gets scored against the user's preferences. Genre and mood are binary — match earns points, miss earns zero. Energy is different — songs earn partial credit based on how close they are to the user's target, so a near match still counts. The scores are totaled, sorted highest to lowest, and the top five are returned with a plain-language explanation for each pick. The one change from the starter was doubling energy's weight (×1.5 → ×3.0) and cutting genre's bonus in half (2.5 → 1.25), which makes energy the dominant signal.
 
 ---
 
 ## 4. Data  
 
-Describe the dataset the model uses.  
-
-Prompts:  
-
-- How many songs are in the catalog  
-- What genres or moods are represented  
-- Did you add or remove data  
-- Are there parts of musical taste missing in the dataset  
+19 songs loaded from a CSV. Each song has a genre, mood, energy (0–1), tempo, valence, danceability, and acousticness. The catalog covers 16 genres, but 14 of them have exactly one song — so the genre bonus fires once and energy takes over from there. The energy distribution is also uneven: most songs cluster low (0.30–0.50) or high (0.75–0.96), with only one song in the middle. No lyrics, no listener history, no collaborative signals — audio features only.
 
 ---
 
 ## 5. Strengths  
 
-Where does your system seem to work well  
-
-Prompts:  
-
-- User types for which it gives reasonable results  
-- Any patterns you think your scoring captures correctly  
-- Cases where the recommendations matched your intuition  
+The system works well when the user's preferences are clear and the catalog has songs to match. Profiles with very different energy levels — like the Studier (0.38) and the Workout User (0.90) — return clean, non-overlapping lists. Every recommendation is fully explainable — you can see the exact score breakdown for each song, which is the biggest advantage over a black-box model.
 
 ---
 
 ## 6. Limitations and Bias 
 
-Where the system struggles or behaves unfairly. 
-
-Prompts:  
-
-- Features it does not consider  
-- Genres or moods that are underrepresented  
-- Cases where the system overfits to one preference  
-- Ways the scoring might unintentionally favor some users  
+Energy scoring can now mathematically outrank a combined genre and mood match. After doubling the multiplier to ×3.0, a song with perfect energy but no genre or mood overlap scores 3.0 — which beats a perfect genre plus mood match with no energy overlap at 2.75. Only one song sits in the 0.5–0.7 energy range, so medium-energy users get pushed toward the extremes. With 14 of 16 genres at one song each, niche preferences like classical or folk get one genre bonus and then the rest of the list defaults to energy.
 
 ---
 
 ## 7. Evaluation  
 
-How you checked whether the recommender behaved as expected. 
-
-Prompts:  
-
-- Which user profiles you tested  
-- What you looked for in the recommendations  
-- What surprised you  
-- Any simple tests or comparisons you ran  
-
-No need for numeric metrics unless you created some.
+I tested three profiles: the Late Night Studier (lofi, focused, 0.38), the Workout User (pop, intense, 0.90), and the Sunday Morning Listener (jazz, relaxed, 0.40). The Studier and Workout returned zero overlap — expected, since the energy gap between them is 0.52. The surprise was positions four and five in every profile: once genre and mood bonuses were spent, energy took over and surfaced genre-foreign songs — Strobe Garden (EDM) landing at rank four for a pop user, Focus Flow (lofi) landing at rank two for a jazz listener. Both are technically close on energy but contextually wrong.
 
 ---
 
 ## 8. Future Work  
 
-Ideas for how you would improve the model next.  
-
-Prompts:  
-
-- Additional features or preferences  
-- Better ways to explain recommendations  
-- Improving diversity among the top results  
-- Handling more complex user tastes  
+Add acousticness to the scoring — it has the widest spread in the dataset (0.05–0.92) and captures a real preference that the current weights completely ignore. Expand the catalog so each genre has more than one song — right now the genre bonus is a one-time reward before the list collapses into energy. Add a no-repeat-artist rule to the ranking step — scoring and ranking are already separated in the code, so this would be a clean addition.
 
 ---
 
 ## 9. Personal Reflection  
 
-A few sentences about your experience.  
-
-Prompts:  
-
-- What you learned about recommender systems  
-- Something unexpected or interesting you discovered  
-- How this changed the way you think about music recommendation apps  
+The biggest learning moment was doubling energy's weight and watching one number change break the whole recommendation logic — a perfect energy match (3.0 points) now beats a perfect genre plus mood match (2.75), and I did not see that coming until I ran the numbers. Using AI to surface the bias patterns was faster than manual testing would have been, but I still had to verify the score math by hand to actually trust what it was telling me. The part that surprised me most was how legitimate the output looks even though it is just three scoring rules — a user looking at the top five results would have no idea the system ran out of relevant songs at position four and started defaulting to whatever is closest on energy. If I kept going, the first thing I would add is acousticness to the scoring — it has the widest spread in the dataset (0.05–0.92) and would actually separate a folk fan from an EDM fan instead of letting them score the same.

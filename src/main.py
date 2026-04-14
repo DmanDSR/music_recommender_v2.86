@@ -15,7 +15,7 @@ except ModuleNotFoundError:
     from src.recommender import load_songs, recommend_songs   # python -m src.main
 
 WIDTH = 62
-MAX_SCORE = 5.5  # genre(2.5) + mood(1.5) + energy(1.5)
+MAX_SCORE = 5.75  # genre(1.25) + mood(1.5) + energy(3.0)
 
 
 def score_bar(score: float, width: int = 20) -> str:
@@ -45,14 +45,36 @@ def main() -> None:
     songs = load_songs("data/songs.csv")
     print(f"Loaded {len(songs)} songs from catalog.")
 
-    # Starter example profile
-    user_prefs = {"genre": "pop", "mood": "happy", "energy": 0.8}
+    user_profiles = [
+        {
+            "name": "High-Energy Pop",
+            "genre": "pop",
+            "mood": "happy",
+            "energy": 0.9,
+        },
+        {
+            "name": "Chill Lofi",
+            "genre": "lofi",
+            "mood": "chill",
+            "energy": 0.35,
+        },
+        {
+            "name": "Deep Intense Rock",
+            "genre": "rock",
+            "mood": "intense",
+            "energy": 0.92,
+        },
+    ]
 
-    print(f"\n  User profile -> genre: {user_prefs['genre']} | "
-          f"mood: {user_prefs['mood']} | energy: {user_prefs['energy']}")
+    for profile in user_profiles:
+        name = profile["name"]
+        user_prefs = {k: v for k, v in profile.items() if k != "name"}
 
-    recommendations = recommend_songs(user_prefs, songs, k=5)
-    display_recommendations(recommendations)
+        print(f"\n  [{name}] -> genre: {user_prefs['genre']} | "
+              f"mood: {user_prefs['mood']} | energy: {user_prefs['energy']}")
+
+        recommendations = recommend_songs(user_prefs, songs, k=5)
+        display_recommendations(recommendations)
 
 
 if __name__ == "__main__":
