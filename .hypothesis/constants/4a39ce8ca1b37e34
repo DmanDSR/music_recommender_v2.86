@@ -1,0 +1,4 @@
+# file: C:\Users\dylan\AppData\Roaming\Python\Python314\site-packages\anthropic\types\beta\beta_advisor_tool_result_error_param.py
+# hypothesis_version: 6.131.15
+
+['max_uses_exceeded', 'overloaded', 'prompt_too_long', 'too_many_requests', 'unavailable']

@@ -1,0 +1,4 @@
+# file: C:\Users\dylan\AppData\Roaming\Python\Python314\site-packages\anthropic\types\beta\beta_user_profile_trust_grant.py
+# hypothesis_version: 6.131.15
+
+['active', 'pending', 'rejected']

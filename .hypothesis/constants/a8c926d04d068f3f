@@ -1,0 +1,4 @@
+# file: C:\Users\dylan\AppData\Roaming\Python\Python314\site-packages\anthropic\resources\beta\sessions\sessions.py
+# hypothesis_version: 6.131.15
+
+[',', 'AsyncSessions', 'Sessions', 'agent', 'agent_id', 'agent_version', 'anthropic-beta', 'asc', 'created_at_gt', 'created_at_gte', 'created_at_lt', 'created_at_lte', 'desc', 'environment_id', 'include_archived', 'limit', 'metadata', 'order', 'page', 'resources', 'title', 'vault_ids']

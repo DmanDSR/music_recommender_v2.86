@@ -1,0 +1,4 @@
+# file: C:\Users\dylan\AppData\Roaming\Python\Python314\site-packages\anthropic\resources\beta\user_profiles.py
+# hypothesis_version: 6.131.15
+
+[',', 'AsyncUserProfiles', 'UserProfiles', 'anthropic-beta', 'asc', 'desc', 'external_id', 'limit', 'metadata', 'order', 'page']

@@ -1,0 +1,4 @@
+# file: C:\Users\dylan\AppData\Roaming\Python\Python314\site-packages\anthropic\types\shared\error_type.py
+# hypothesis_version: 6.131.15
+
+['ErrorType', 'api_error', 'authentication_error', 'billing_error', 'not_found_error', 'overloaded_error', 'permission_error', 'rate_limit_error', 'timeout_error']

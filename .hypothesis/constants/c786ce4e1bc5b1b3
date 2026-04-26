@@ -1,0 +1,4 @@
+# file: C:\Users\dylan\AppData\Roaming\Python\Python314\site-packages\httpx\_transports\__init__.py
+# hypothesis_version: 6.131.15
+
+['ASGITransport', 'AsyncBaseTransport', 'AsyncHTTPTransport', 'BaseTransport', 'HTTPTransport', 'MockTransport', 'WSGITransport']

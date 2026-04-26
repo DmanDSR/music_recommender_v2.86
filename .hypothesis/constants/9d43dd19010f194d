@@ -1,0 +1,4 @@
+# file: C:\Users\dylan\AppData\Roaming\Python\Python314\site-packages\click\parser.py
+# hypothesis_version: 6.131.15
+
+['-', '--', '=', 'Context', 'CoreArgument', 'CoreOption', 'CoreParameter', 'ParsingState', 'V', 'append', 'append_const', 'count', 'store', 'store_const', 'te.Deque[V]']

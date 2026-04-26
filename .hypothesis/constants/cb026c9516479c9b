@@ -1,0 +1,4 @@
+# file: C:\Users\dylan\AppData\Roaming\Python\Python314\site-packages\anthropic\resources\models.py
+# hypothesis_version: 6.131.15
+
+[',', '/v1/models', 'AsyncModels', 'Models', 'after_id', 'anthropic-beta', 'before_id', 'limit']

@@ -1,18 +1,15 @@
 """
 Command line runner for the Music Recommender Simulation.
 
-This file helps you quickly run and test your recommender.
-
-You will implement the functions in recommender.py:
-- load_songs
-- score_song
-- recommend_songs
+Usage:
+    python -m src.main          # demo mode (three hardcoded profiles)
+    python -m src.main --vibe   # interactive Vibe Bot mode
+    python -m src.main --vibe --debug  # Vibe Bot with debug logging
 """
 
-try:
-    from recommender import load_songs, recommend_songs       # python src/main.py
-except ModuleNotFoundError:
-    from src.recommender import load_songs, recommend_songs   # python -m src.main
+import argparse
+
+from src.recommender import load_songs, recommend_songs
 
 WIDTH = 62
 MAX_SCORE = 5.75  # genre(1.25) + mood(1.5) + energy(3.0)
@@ -41,7 +38,32 @@ def display_recommendations(recommendations) -> None:
     print("\n" + "=" * WIDTH + "\n")
 
 
+def parse_args() -> argparse.Namespace:
+    """Parse CLI arguments for demo mode or vibe bot mode."""
+    parser = argparse.ArgumentParser(description="VibeMatch Music Recommender")
+    parser.add_argument(
+        "--vibe",
+        action="store_true",
+        help="Launch interactive Vibe Bot mode",
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logging (only with --vibe)",
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
+    args = parse_args()
+
+    if args.vibe:
+        # Deferred import to avoid loading anthropic SDK in demo mode
+        from src.vibe_bot import vibe_bot_interactive
+        vibe_bot_interactive(debug=args.debug)
+        return
+
+    # --- Existing demo mode (unchanged) ---
     songs = load_songs("data/songs.csv")
     print(f"Loaded {len(songs)} songs from catalog.")
 

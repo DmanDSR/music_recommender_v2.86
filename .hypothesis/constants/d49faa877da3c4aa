@@ -1,0 +1,4 @@
+# file: C:\Users\dylan\AppData\Roaming\Python\Python314\site-packages\anthropic\lib\tools\_beta_runner.py
+# hypothesis_version: 6.131.15
+
+['AnyFunctionToolT', 'RunnerItemT', 'X-Stainless-Helper', 'assistant', 'compaction', 'container', 'content', 'enabled', 'extra_headers', 'is_error', 'max_tokens', 'messages', 'model', 'role', 'summary_prompt', 'text', 'tool_result', 'tool_use', 'tool_use_id', 'type', 'user']

@@ -1,0 +1,4 @@
+# file: C:\Users\dylan\AppData\Roaming\Python\Python314\site-packages\anthropic\_utils\_logs.py
+# hypothesis_version: 6.131.15
+
+['%Y-%m-%d %H:%M:%S', 'ANTHROPIC_LOG', 'anthropic', 'debug', 'httpx', 'info']

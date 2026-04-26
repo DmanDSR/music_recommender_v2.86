@@ -1,0 +1,4 @@
+# file: C:\Users\dylan\AppData\Roaming\Python\Python314\site-packages\anthropic\types\text_editor_code_execution_tool_result_error_code.py
+# hypothesis_version: 6.131.15
+
+['file_not_found', 'invalid_tool_input', 'too_many_requests', 'unavailable']

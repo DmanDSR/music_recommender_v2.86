@@ -1,297 +1,328 @@
-# 🎵 Music Recommender Simulation
+# 🎵 VibeMatch — Music Recommender with AI-Powered Vibe Bot
 
 ## Project Summary
 
-In this project you will build and explain a small music recommender system.
+VibeMatch is a content-based music recommender that scores 19 songs against a user's genre, mood, and energy preferences. It has two modes:
 
-Your goal is to:
+1. **Demo mode** — runs three hardcoded user profiles and prints ranked playlists with score breakdowns.
+2. **Vibe Bot mode** — an interactive CLI where you describe an activity or mood in plain English (e.g., "study for finals", "power workout") and an AI agent builds you a curated 5-song playlist with explanations.
 
-- Represent songs and a user "taste profile" as data
-- Design a scoring rule that turns that data into recommendations
-- Evaluate what your system gets right and wrong
-- Reflect on how this mirrors real world AI recommenders
+The Vibe Bot uses an agentic workflow powered by the Claude API. Claude interprets your vibe, calls a `search_songs` tool backed by the existing scoring pipeline, reviews the results, optionally re-searches with different parameters, and writes a final playlist. The AI layer sits on top of the same algorithm that powers demo mode — it doesn't bypass the scoring system.
 
-Replace this paragraph with your own summary of what your version does.
-
----
-
-## How The System Works
-
-Real-world recommendation systems like Spotify's do two things at once — they look at what songs have in common (content signals like energy and genre) and they look at what users with similar taste tend to listen to (collaborative signals). This version focuses on the content side, which is realistic for a small catalog without a user base to draw collaborative signals from.
-
-The pipeline has three steps:
-
-1. **`load_songs()`** reads `data/songs.csv` and returns a list of 19 song dictionaries, converting all numeric columns (energy, tempo_bpm, valence, danceability, acousticness) from raw strings to floats so math can be done on them.
-2. **`score_song()`** acts as the judge. It is called once per song and compares that song's attributes against the user's taste profile, awarding points for genre match, mood match, and energy proximity. It returns both a numeric score and a list of human-readable reasons so every recommendation is explainable (e.g. `"genre match (+2.5); mood miss: chill != happy (+0.0); energy proximity (+1.47)"`).
-3. **`recommend_songs()`** drives the full pipeline. It loops through all 19 songs, calls `score_song` on each one, and then ranks the results using Python's `sorted()`. It returns the top k results as `(song, score, explanation)` tuples.
-
-### Features in Use
-
-**Song object:**
-
-- `genre` — broad style family (pop, jazz, lofi, etc.)
-- `mood` — emotional vibe (chill, intense, relaxed, etc.)
-- `energy` — how loud and intense the song is, 0 to 1
-- `tempo_bpm` — speed of the song
-- `valence` — how positive or bright it sounds, 0 to 1
-- `danceability` — how groove-driven the beat is, 0 to 1
-- `acousticness` — how organic vs. electronic it sounds, 0 to 1
-- `artist` — for later when catalog is bigger
-
-**UserProfile object:**
-
-- `favorite_genre` — what genre they identify with most
-- `favorite_mood` — the vibe they're usually going for
-- `target_energy` — what energy level they want
-- `likes_acoustic` — whether they prefer organic or produced sound
+**Course:** CodePath AI110 — Spring 2026
+**Language:** Python
 
 ---
 
-### Algorithm Recipe
+## How It Works
 
-This system uses **content-based filtering with explicit taste onboarding** — the user tells it their preferences upfront, and every song gets scored against those preferences. Collaborative signals (what users with similar taste listen to) and a feedback loop are planned for a later version once there's enough user data to make them useful.
+### Scoring Pipeline
 
-**Weight hierarchy:**
+The core algorithm scores every song in the catalog against user preferences using three signals:
 
 | Signal | Logic | Points |
-|---|---|---|
-| Genre | Binary match — right genre or not | +2.5 |
+|--------|-------|--------|
+| Genre | Binary match — right genre or not | +1.25 |
 | Mood | Binary match — right mood or not | +1.5 |
-| Energy | Proximity: `(1.0 - abs(song.energy - user.target_energy)) × 1.5` | 0 to +1.5 |
+| Energy | Proximity: `(1.0 - abs(song.energy - user.energy)) × 3.0` | 0 to +3.0 |
 
-Genre carries the most weight because it's identity-level — a user who says they like jazz is probably not trying to hear rock no matter what the energy is. Mood is weighted second because it's a strong signal but more contextual (the same user might want chill on some days and intense on others). Energy sits below the binary signals but uses a proximity formula instead of a match/no-match check, so a song that's close to the target energy still earns partial credit.
+**Max possible score: 5.75** (genre 1.25 + mood 1.5 + energy 3.0)
 
-**Scoring and ranking are kept as separate concerns:**
+Energy carries the most weight because it's the only continuous signal — a song close to the target energy still earns partial credit, while genre and mood are all-or-nothing.
 
-- **Scoring** (`score_song`) — answers "how well does this one song match?" for a single song at a time. No knowledge of other songs.
-- **Ranking** (the `sorted()` call inside `recommend_songs`) — takes all the scored tuples and sorts them highest-to-lowest. `sorted()` is used instead of `.sort()` because it returns a new list without modifying the original catalog. This is the extension point for future rules like no-repeat-artist filters or diversity boosts, without touching the scoring math.
+### Vibe Bot (Agentic Workflow)
 
----
+When you run `--vibe` mode, here's what happens under the hood:
+
+1. You type a vibe like "lazy Sunday morning with coffee"
+2. The system sends your vibe to Claude with a `search_songs` tool definition
+3. Claude interprets your vibe and decides on genre, mood, and energy parameters
+4. Claude calls `search_songs` — which runs the real `recommend_songs()` scoring pipeline
+5. Claude reads the results, optionally searches again with different parameters
+6. Claude writes a numbered playlist with explanations for each song pick
+
+The loop is capped at 6 API calls per session to prevent runaway costs. In practice, most interactions take 2-3 calls.
 
 ### Data Flow
 
-This diagram shows how a single song travels from the CSV file to a ranked recommendation. The scoring box runs once per song; ranking happens after all songs have been scored.
-
 ```mermaid
 flowchart TD
-    A["data/songs.csv"] -->|"load_songs()"| B["Song List\n19 song dicts"]
-    C["User Preferences\ngenre · mood · energy"] --> D["recommend_songs()"]
+    A["data/songs.csv"] -->|"load_songs()"| B["Song List — 19 songs"]
+    C["User Preferences"] --> D["recommend_songs()"]
     B --> D
 
-    D --> E["Pick next song from list"]
-
-    subgraph LOOP["score_song() — runs once per song"]
-        F{"genre match?"}
-        F -->|"yes"| G["+2.5"]
-        F -->|"no"| H["+0.0"]
-        G & H --> I{"mood match?"}
-        I -->|"yes"| J["+1.5"]
-        I -->|"no"| K["+0.0"]
-        J & K --> L["energy proximity\n(1.0 − |song.energy − user.energy|) × 1.5"]
-        L --> M["return (score, explanation)"]
-    end
-
-    E --> F
-    M --> N["add to scored list"]
-    N --> O{"more songs?"}
-    O -->|"yes"| E
-    O -->|"no"| P["sorted() descending\ninside recommend_songs()"]
-    P --> Q["Top K Recommendations\nsong · score · explanation"]
+    D --> E["score_song() — runs once per song"]
+    E --> F["Genre match? +1.25"]
+    E --> G["Mood match? +1.5"]
+    E --> H["Energy proximity: up to +3.0"]
+    F & G & H --> I["Total score"]
+    I --> J["sorted() descending → Top 5"]
 ```
 
 ---
 
-### Known Biases
+## Song Catalog
 
-- **Genre dominance** — at +2.5, a genre match outweighs a nearly perfect energy + mood match combined. A genuinely great song in the wrong genre will rarely surface.
-- **Mood miss is costly** — a song that is the right genre and perfect energy but wrong mood loses 1.5 points with no partial credit. The system treats mood as all-or-nothing, which doesn't reflect how listeners actually feel (a slightly-off mood song can still land).
-- **Energy is the only continuous signal** — valence, acousticness, and tempo are not used in v1, so two songs that feel very different can score identically if they share genre, mood, and similar energy.
-- **No discovery** — purely content-based scoring creates a filter bubble. The system keeps recommending songs close to what the user already said they like and has no mechanism to surface something unexpected that might become a favorite.
+The catalog (`data/songs.csv`) contains 19 songs across 16 genres and 15 moods.
 
-![alt text](image.png)
+**Genres (16):** pop, lofi, rock, ambient, jazz, synthwave, indie pop, hip-hop, r&b, classical, metal, reggae, folk, edm, blues, soul
+
+**Moods (15):** happy, chill, intense, relaxed, moody, focused, confident, romantic, melancholic, aggressive, dreamy, sad, euphoric, nostalgic, tender
+
+**Energy range:** 0.22 (Autumn Sonata / classical) to 0.96 (Iron Curtain / metal)
+
 ---
 
-
-![alt text](<Screenshot 2026-04-14 002729.png>)
-
-![alt text](<Screenshot 2026-04-14 002714.png>) 
- 
-![alt text](<Screenshot 2026-04-14 002658.png>)
 ## Getting Started
+
+### Prerequisites
+
+- Python 3.10 or higher
+- An Anthropic API key (only needed for Vibe Bot mode)
 
 ### Setup
 
-1. Create a virtual environment (optional but recommended):
+1. Clone the repository and create a virtual environment:
 
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate      # Mac or Linux
-   .venv\Scripts\activate         # Windows
+```bash
+python -m venv .venv
+source .venv/bin/activate      # Mac / Linux
+.venv\Scripts\activate         # Windows
+```
 
-2. Install dependencies
+2. Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Run the app:
+3. Set up your API key (only needed for Vibe Bot mode):
 
 ```bash
+cp .env.example .env
+```
+
+Open `.env` and paste your Anthropic API key. You can get one at [console.anthropic.com](https://console.anthropic.com).
+
+### Running the App
+
+```bash
+# Demo mode — three hardcoded profiles, no API key needed
 python -m src.main
+
+# Vibe Bot mode — interactive AI playlist builder
+python -m src.main --vibe
+
+# Vibe Bot with debug logging — shows API calls and tool invocations
+python -m src.main --vibe --debug
 ```
 
-### Running Tests
+### Example Vibes to Try
 
-Run the starter tests with:
+| Vibe input | What Claude typically picks |
+|---|---|
+| "I need to study for finals" | lofi / focused / low energy |
+| "power workout, get me hyped" | edm or pop / euphoric or intense / high energy |
+| "lazy Sunday morning with coffee" | jazz or ambient / relaxed / low energy |
+| "driving at night" | synthwave / moody / medium-high energy |
+
+---
+
+## Project Structure
+
+```
+music_recommender_v2.86/
+├── src/
+│   ├── main.py              # CLI runner with --vibe and --debug flags
+│   ├── recommender.py       # Core scoring pipeline (load, score, recommend)
+│   └── vibe_bot.py          # Vibe Bot module (agentic loop, tool handler, display)
+├── tests/
+│   ├── test_recommender.py  # 9 unit tests for the scoring pipeline
+│   └── test_vibe_bot.py     # 33 tests (unit + property-based) for Vibe Bot
+├── data/
+│   └── songs.csv            # 19-song catalog
+├── .env.example             # API key configuration template
+├── requirements.txt         # anthropic, hypothesis, pytest, python-dotenv
+├── model_card.md            # Model card with strengths, limitations, evaluation
+├── Project_Context.md       # Detailed development log and architecture notes
+└── README.md
+```
+
+---
+
+## Dependencies
+
+| Package | What it's for |
+|---------|---------------|
+| `anthropic` | Claude API client for the Vibe Bot agentic loop |
+| `python-dotenv` | Loads the API key from `.env` |
+| `pytest` | Test runner |
+| `hypothesis` | Property-based testing — generates hundreds of random inputs to stress-test correctness |
+
+Install all of them with `pip install -r requirements.txt`.
+
+---
+
+## Tests
+
+The project has **42 tests** across two test files. Run them all with:
 
 ```bash
-pytest
+pytest tests/ -v
 ```
 
-You can add more tests in `tests/test_recommender.py`.
+### Recommender Tests (`tests/test_recommender.py`) — 9 tests
+
+These tests verify that the core scoring and ranking algorithm works correctly.
+
+| Test | What it checks |
+|------|----------------|
+| `test_recommend_returns_correct_count` | Asking for 2 recommendations returns exactly 2 |
+| `test_recommend_ranks_matching_song_first` | A pop/happy user gets the pop song ranked above a lofi song |
+| `test_recommend_ranks_lofi_first_for_lofi_user` | A lofi/chill user gets the lofi song ranked first |
+| `test_recommend_respects_k_limit` | Asking for `k=1` returns only 1 result |
+| `test_explain_recommendation_contains_score_and_reasons` | Explanations include "genre match", "mood match", and "energy proximity" |
+| `test_explain_recommendation_shows_misses` | When a song doesn't match, the explanation says "genre miss" and "mood miss" |
+| `test_score_song_perfect_match` | A song matching genre, mood, and energy exactly scores 5.75 (the maximum) |
+| `test_score_song_no_match` | A song with wrong genre, wrong mood, and opposite energy scores below 1.0 |
+| `test_recommend_songs_returns_sorted_results` | Results come back sorted highest score first |
+
+**Why these tests matter:** They make sure the scoring math is correct and that rankings behave predictably. If someone changes the weights or scoring logic, these tests catch regressions immediately.
+
+### Vibe Bot Tests (`tests/test_vibe_bot.py`) — 33 tests
+
+These tests cover the entire Vibe Bot feature without making real API calls. The Claude client is mocked in every test that touches the agentic loop.
+
+#### CLI Argument Parsing (8 tests)
+
+Tests that the `--vibe` and `--debug` flags work correctly and dispatch to the right mode.
+
+| Test | What it checks |
+|------|----------------|
+| `test_vibe_flag_sets_vibe_true` | `--vibe` sets the vibe flag to True |
+| `test_no_flags_defaults_to_demo_mode` | No flags means demo mode (vibe is False) |
+| `test_debug_with_vibe_sets_both_true` | `--debug --vibe` sets both flags |
+| `test_debug_without_vibe_runs_demo_mode` | `--debug` alone still runs demo mode |
+| `test_no_flags_runs_demo_mode` | With no flags, `main()` calls the demo path (loads songs, runs 3 profiles) |
+| `test_vibe_flag_launches_vibe_mode` | With `--vibe`, `main()` calls `vibe_bot_interactive()` |
+| `test_vibe_debug_passes_debug_true` | With `--vibe --debug`, debug=True is passed through |
+| `test_debug_without_vibe_runs_demo` | `--debug` without `--vibe` runs demo mode, not vibe bot |
+
+**Why:** These make sure the CLI entry point routes correctly. A user running `python -m src.main` should never accidentally trigger the Vibe Bot (which requires an API key).
+
+#### API Key Validation (3 tests)
+
+| Test | What it checks |
+|------|----------------|
+| `test_missing_key_shows_error_and_exits` | No API key → prints a helpful error mentioning `.env.example` and exits |
+| `test_empty_key_shows_error_and_exits` | Empty string API key → same helpful error and exit |
+| `test_valid_key_returns_key_string` | A valid key is returned so the app can use it |
+
+**Why:** Without these, a missing API key would cause a cryptic error deep in the Anthropic SDK instead of a clear message telling the user what to do.
+
+#### Tool Definition (4 tests)
+
+| Test | What it checks |
+|------|----------------|
+| `test_tool_definition_contains_all_16_genres` | The tool definition lists all 16 genres from the catalog |
+| `test_tool_definition_contains_all_15_moods` | The tool definition lists all 15 moods from the catalog |
+| `test_tool_definition_has_correct_name` | The tool is named `search_songs` |
+| `test_tool_definition_requires_genre_mood_energy` | Genre, mood, and energy are all required fields |
+
+**Why:** Claude uses the tool definition to know what parameters it can send. If a genre or mood is missing from the enum list, Claude can never search for it, and the user gets worse playlists.
+
+#### Search Handler (6 tests)
+
+| Test | What it checks |
+|------|----------------|
+| `test_returns_valid_json_with_correct_structure` | Results are valid JSON with title, artist, genre, mood, energy, and score fields |
+| `test_returns_at_most_5_results` | Never returns more than 5 songs |
+| `test_result_fields_have_correct_types` | Strings are strings, numbers are numbers |
+| `test_energy_clamping_high_value` | Energy of 5.0 gets clamped to 1.0 (doesn't crash) |
+| `test_energy_clamping_negative_value` | Energy of -2.0 gets clamped to 0.0 (doesn't crash) |
+| `test_unknown_tool_returns_error_result` | An unknown tool name produces an error JSON (not a crash) |
+
+**Why:** The search handler is the bridge between Claude and the scoring pipeline. If it returns malformed JSON, Claude can't read the results. If it crashes on weird energy values, the whole session fails.
+
+#### Agentic Loop (6 tests)
+
+| Test | What it checks |
+|------|----------------|
+| `test_end_turn_extracts_final_text` | When Claude says "I'm done", the final playlist text is extracted correctly |
+| `test_tool_use_triggers_tool_handler` | When Claude calls a tool, the handler runs and the loop continues |
+| `test_iteration_cap_reached_shows_informative_message` | If Claude keeps calling tools forever, the loop stops at 6 iterations with a clear message |
+| `test_auth_error_shows_api_key_message` | Invalid API key → friendly error mentioning `.env` |
+| `test_rate_limit_error_suggests_retry` | Rate limit hit → message suggesting "try again later" |
+| `test_generic_exception_shows_friendly_message` | Unexpected crash → "Something went wrong" instead of a stack trace |
+
+**Why:** The agentic loop is the core of the Vibe Bot. These tests verify it handles every possible outcome — success, tool calls, hitting the safety cap, and all the ways the API can fail — without showing raw errors to the user.
+
+#### Empty Input (1 test)
+
+| Test | What it checks |
+|------|----------------|
+| `test_empty_input_triggers_reprompt` | Pressing Enter with no text re-prompts instead of sending an empty string to Claude |
+
+**Why:** Sending an empty string to the Claude API would waste an API call and return a confusing response.
+
+#### Property-Based Tests (5 tests)
+
+Property-based tests use the `hypothesis` library to generate hundreds of random inputs and verify that certain rules always hold. Instead of testing one specific case, they test the rule itself.
+
+| Test | Property being verified | How it works |
+|------|------------------------|--------------|
+| `test_energy_clamping_bounded` | Any float value, when clamped, is between 0.0 and 1.0 | Generates 100 random floats (including infinity, NaN, negatives) and checks the clamped result is always in bounds |
+| `test_energy_clamping_equals_expected` | Clamping always equals `max(0.0, min(1.0, value))` | Generates 100 random floats and verifies the formula produces the expected result |
+| `test_handle_search_songs_returns_valid_json` | For any valid genre/mood/energy combo, the search handler returns well-formed results | Generates 100 random combinations of genres (from 16), moods (from 15), and energy values, then checks the JSON structure |
+| `test_agentic_loop_respects_iteration_cap` | The loop never makes more than 6 API calls, no matter what | Generates 100 random iteration counts and mocks Claude to always request another tool call — verifies the loop always stops at 6 |
+| `test_display_contains_vibe_input` | The playlist display always includes the original vibe text | Generates 100 random strings and checks each one appears in the printed output |
+
+**Why property-based tests:** Regular unit tests check specific examples ("does energy 5.0 get clamped?"). Property tests check the rule itself ("does *any* energy value get clamped correctly?"). This catches edge cases you'd never think to write by hand — like what happens with `NaN`, negative infinity, or Unicode strings.
 
 ---
 
-## Experiments You Tried
+## Known Biases and Limitations
 
-Use this section to document the experiments you ran. For example:
-
-- What happened when you changed the weight on genre from 2.0 to 0.5
-- What happened when you added tempo or valence to the score
-- How did your system behave for different types of users
+- **Energy dominance** — at ×3.0, a perfect energy match (3.0 points) outscores a combined genre + mood match with no energy overlap (2.75 points). Songs in the wrong genre can rank high if their energy is close.
+- **Mood is all-or-nothing** — "chill" and "relaxed" score zero against each other, even though they're similar in meaning. No partial credit for close moods.
+- **Tiny catalog (19 songs)** — 14 of 16 genres have exactly one song. After the genre bonus fires once, energy takes over for the rest of the list.
+- **No discovery** — the system only recommends songs similar to stated preferences. There's no mechanism to surface something unexpected.
+- **Energy is the only continuous signal** — valence, acousticness, and tempo are loaded from the CSV but not used in scoring.
 
 ---
 
-## Limitations and Risks
+## Experiments and Observations
 
-Summarize some limitations of your recommender.
+- **Doubled energy weight (×1.5 → ×3.0) and halved genre (2.5 → 1.25):** Energy became the dominant signal. Positions 4-5 in every profile started surfacing genre-foreign songs purely because their energy was close.
+- **Three user profiles tested (Studier, Workout, Sunday Morning):** Studier and Workout returned zero overlap — the 0.52 energy gap cleanly separates them. But Studier and Sunday Morning overlapped on 4 of 5 songs despite different genre/mood preferences, because their energy targets are only 0.02 apart.
+- **Tail-end behavior:** Once genre and mood bonuses are spent (usually after 1-2 songs), remaining slots default to whatever is closest on energy regardless of genre or mood.
 
-Examples:
+---
 
-- It only works on a tiny catalog
-- It does not understand lyrics or language
-- It might over favor one genre or mood
+## Future Work
 
-You will go deeper on this in your model card.
+- Add acousticness to scoring — it has the widest spread in the dataset (0.05–0.92) and would separate folk fans from EDM fans
+- Expand the catalog so each genre has more than one song
+- Add a no-repeat-artist rule to the ranking step
+- Add partial credit for similar moods (e.g., "chill" and "relaxed" should score something)
+- iTunes/Apple Music library import for personalized catalogs
 
 ---
 
 ## Reflection
 
-Read and complete `model_card.md`:
+Read the full model card: [**model_card.md**](model_card.md)
 
-[**Model Card**](model_card.md)
+The biggest learning moment was doubling energy's weight and watching one number change break the whole recommendation logic. A perfect energy match (3.0 points) now beats a perfect genre + mood match (2.75), and that wasn't obvious until the numbers were run. The output still looks legitimate — a user seeing the top five results would have no idea the system ran out of relevant songs at position four and started defaulting to whatever is closest on energy.
 
-Write 1 to 2 paragraphs here about what you learned:
-
-- about how recommenders turn data into predictions
-- about where bias or unfairness could show up in systems like this
-
+Building this changed how I think about real recommenders. The scoring rules are simple, but the interactions between weights create emergent behavior that's hard to predict without testing. A system that looks well-calibrated on one pair of profiles can completely fail on another.
 
 ---
 
-## 7. `model_card_template.md`
+![alt text](image.png)
 
-Combines reflection and model card framing from the Module 3 guidance. :contentReference[oaicite:2]{index=2}  
+![alt text](<Screenshot 2026-04-14 002729.png>)
 
-```markdown
-# 🎧 Model Card - Music Recommender Simulation
+![alt text](<Screenshot 2026-04-14 002714.png>)
 
-## 1. Model Name
-
-Give your recommender a name, for example:
-
-> VibeFinder 1.0
-
----
-
-## 2. Intended Use
-
-- What is this system trying to do
-- Who is it for
-
-Example:
-
-> This model suggests 3 to 5 songs from a small catalog based on a user's preferred genre, mood, and energy level. It is for classroom exploration only, not for real users.
-
----
-
-## 3. How It Works (Short Explanation)
-
-Describe your scoring logic in plain language.
-
-- What features of each song does it consider
-- What information about the user does it use
-- How does it turn those into a number
-
-Try to avoid code in this section, treat it like an explanation to a non programmer.
-
----
-
-## 4. Data
-
-Describe your dataset.
-
-- How many songs are in `data/songs.csv`
-- Did you add or remove any songs
-- What kinds of genres or moods are represented
-- Whose taste does this data mostly reflect
-
----
-
-## 5. Strengths
-
-Where does your recommender work well
-
-You can think about:
-- Situations where the top results "felt right"
-- Particular user profiles it served well
-- Simplicity or transparency benefits
-
----
-
-## 6. Limitations and Bias
-
-Where does your recommender struggle
-
-Some prompts:
-- Does it ignore some genres or moods
-- Does it treat all users as if they have the same taste shape
-- Is it biased toward high energy or one genre by default
-- How could this be unfair if used in a real product
-
----
-
-## 7. Evaluation
-
-How did you check your system
-
-Examples:
-- You tried multiple user profiles and wrote down whether the results matched your expectations
-- You compared your simulation to what a real app like Spotify or YouTube tends to recommend
-- You wrote tests for your scoring logic
-
-You do not need a numeric metric, but if you used one, explain what it measures.
-
----
-
-## 8. Future Work
-
-If you had more time, how would you improve this recommender
-
-Examples:
-
-- Add support for multiple users and "group vibe" recommendations
-- Balance diversity of songs instead of always picking the closest match
-- Use more features, like tempo ranges or lyric themes
-
----
-
-## 9. Personal Reflection
-
-A few sentences about what you learned:
-
-- What surprised you about how your system behaved
-- How did building this change how you think about real music recommenders
-- Where do you think human judgment still matters, even if the model seems "smart"
-
+![alt text](<Screenshot 2026-04-14 002658.png>)

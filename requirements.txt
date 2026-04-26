@@ -1,3 +1,4 @@
-pandas
+anthropic
+hypothesis
 pytest
-streamlit
+python-dotenv

@@ -1,0 +1,4 @@
+# file: C:\Users\dylan\AppData\Roaming\Python\Python314\site-packages\anthropic\types\plain_text_source.py
+# hypothesis_version: 6.131.15
+
+['PlainTextSource', 'text', 'text/plain']

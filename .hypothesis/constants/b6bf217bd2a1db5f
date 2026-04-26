@@ -1,0 +1,4 @@
+# file: C:\Users\dylan\AppData\Roaming\Python\Python314\site-packages\anthropic\resources\beta\agents\agents.py
+# hypothesis_version: 6.131.15
+
+[',', '/v1/agents?beta=true', 'Agents', 'AsyncAgents', 'anthropic-beta', 'created_at_gte', 'created_at_lte', 'description', 'include_archived', 'limit', 'mcp_servers', 'metadata', 'model', 'name', 'page', 'skills', 'system', 'tools', 'version']

@@ -1,0 +1,4 @@
+# file: C:\Users\dylan\AppData\Roaming\Python\Python314\site-packages\anthropic\_compat.py
+# hypothesis_version: 6.131.15
+
+['1.', '_ModelT', '_T', 'by_alias', 'dict[str, Any]', 'json', 'model_dump', 'python']

@@ -1,0 +1,4 @@
+# file: C:\Users\dylan\Documents\Dylans Doc\Dylan courses\2026 Courses\Code Path\Spring\AI110\Project\music_recommender_v2.86\src\recommender.py
+# hypothesis_version: 6.131.15
+
+[0.0, 1.0, 1.25, 1.5, 3.0, '; ', 'acousticness', 'artist', 'danceability', 'energy', 'genre', 'genre match (+1.25)', 'id', 'mood', 'mood match (+1.5)', 'tempo_bpm', 'title', 'utf-8', 'valence']

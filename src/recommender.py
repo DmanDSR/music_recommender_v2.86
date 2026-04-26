@@ -38,32 +38,85 @@ class Recommender:
         """Initialize recommender with a list of songs."""
         self.songs = songs
 
+    def _song_to_dict(self, song: Song) -> Dict:
+        """Convert a Song dataclass to the dict format used by score_song()."""
+        return {
+            "id": song.id,
+            "title": song.title,
+            "artist": song.artist,
+            "genre": song.genre,
+            "mood": song.mood,
+            "energy": song.energy,
+            "tempo_bpm": song.tempo_bpm,
+            "valence": song.valence,
+            "danceability": song.danceability,
+            "acousticness": song.acousticness,
+        }
+
+    def _user_to_dict(self, user: UserProfile) -> Dict:
+        """Convert a UserProfile dataclass to the dict format used by score_song()."""
+        return {
+            "genre": user.favorite_genre,
+            "mood": user.favorite_mood,
+            "energy": user.target_energy,
+        }
+
     def recommend(self, user: UserProfile, k: int = 5) -> List[Song]:
-        """Recommend top k songs for a user profile."""
-        # TODO: Implement recommendation logic
-        return self.songs[:k]
+        """Recommend top k songs for a user profile using the real scoring pipeline."""
+        user_prefs = self._user_to_dict(user)
+        scored = []
+        for song in self.songs:
+            song_dict = self._song_to_dict(song)
+            score, _reasons = score_song(user_prefs, song_dict)
+            scored.append((song, score))
+        scored.sort(key=lambda item: item[1], reverse=True)
+        return [song for song, _score in scored[:k]]
 
     def explain_recommendation(self, user: UserProfile, song: Song) -> str:
-        """Explain why a song was recommended to a user."""
-        # TODO: Implement explanation logic
-        return "Explanation placeholder"
+        """Explain why a song was recommended to a user using the real scoring pipeline."""
+        user_prefs = self._user_to_dict(user)
+        song_dict = self._song_to_dict(song)
+        score, reasons = score_song(user_prefs, song_dict)
+        return f"Score: {score:.2f} — " + "; ".join(reasons)
 
 def load_songs(csv_path: str) -> List[Dict]:
-    """Load songs from a CSV file."""
+    """Load songs from a CSV file.
+
+    Returns a list of song dicts with numeric fields cast to int/float.
+    Raises SystemExit with a clear message if the file is missing or
+    a row contains invalid data.
+    """
     import csv
+    import sys
 
     int_fields = {"id"}
     float_fields = {"energy", "tempo_bpm", "valence", "danceability", "acousticness"}
 
+    try:
+        f = open(csv_path, newline="", encoding="utf-8")
+    except FileNotFoundError:
+        print(f"Error: Song catalog not found at '{csv_path}'.")
+        print("Make sure data/songs.csv exists in the project root.")
+        sys.exit(1)
+
     songs = []
-    with open(csv_path, newline="", encoding="utf-8") as f:
+    with f:
         reader = csv.DictReader(f)
-        for row in reader:
-            for field in int_fields:
-                row[field] = int(row[field])
-            for field in float_fields:
-                row[field] = float(row[field])
+        for row_num, row in enumerate(reader, start=2):  # row 2 = first data row
+            try:
+                for field in int_fields:
+                    row[field] = int(row[field])
+                for field in float_fields:
+                    row[field] = float(row[field])
+            except (ValueError, KeyError) as e:
+                print(f"Warning: Skipping row {row_num} in '{csv_path}' — {e}")
+                continue
             songs.append(row)
+
+    if not songs:
+        print(f"Error: No valid songs loaded from '{csv_path}'.")
+        sys.exit(1)
+
     return songs
 
 def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
@@ -94,14 +147,6 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
     return score, reasons
 
 
-def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
-    """
-    Scores a single song against user preferences.
-    Required by recommend_songs() and src/main.py
-    """
-    # TODO: Implement scoring logic using your Algorithm Recipe from Phase 2.
-    # Expected return format: (score, reasons)
-    return []
 
 def recommend_songs(user_prefs: Dict, songs: List[Dict], k: int = 5) -> List[Tuple[Dict, float, str]]:
     """Recommend top k songs based on user preferences."""
