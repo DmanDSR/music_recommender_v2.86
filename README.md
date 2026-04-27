@@ -11,7 +11,7 @@ The Vibe Bot runs on an agentic loop using the Claude API. You describe your vib
 
 ### Original Project
 
-This started as the **Music Recommender Simulation** from Modules 1-3 — a basic content-based recommender that scored songs against hardcoded user profiles using genre, mood, and energy matching, then printed ranked playlists. The original version had no AI, no interactivity, and no way to describe what you wanted in plain language. VibeMatch keeps that same scoring engine but adds the Vibe Bot on top, so now you can just say what you're doing and get a playlist back.
+This started as the **Music Recommender Simulation** from week 6 — a basic content-based recommender that scored songs against hardcoded user profiles using genre, mood, and energy matching, then printed ranked playlists. The original version had no AI, no interactivity, and no way to describe what you wanted in plain language. VibeMatch keeps that same scoring engine but adds the Vibe Bot on top, so now you can just say what you're doing and get a playlist back.
 
 **Course:** CodePath AI110 — Spring 2026
 **Language:** Python
