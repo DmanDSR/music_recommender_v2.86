@@ -144,6 +144,10 @@ The screenshots below show additional runs with different vibes. Each one goes t
 
 ![Demo output example 3](<assets/Vibe_bot_working_4.png>)
 
+### Video Demo
+
+Watch the full walkthrough here: [VibeMatch Demo on Loom](https://www.loom.com/share/abccbfd6bb0b4dd79b718aef2a762593)
+
 ---
 
 ## Project Structure
