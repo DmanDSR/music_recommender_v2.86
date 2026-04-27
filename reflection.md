@@ -1,33 +1,29 @@
-# Profile Comparison Reflections
+# Reflection — AI Ethics, Reliability, and Collaboration
 
 ---
 
-## Pair 1 — Late Night Studier vs. Workout User
+## What are the limitations or biases in your system?
 
-**Studier top 5:** Focus Flow, Library Rain, Midnight Coding, Coffee Shop Stories, Porch Light  
-**Workout top 5:** Gym Hero, Storm Runner, Sunrise City, Strobe Garden, Iron Curtain  
-**Overlap:** None.
-
-Zero overlap — the energy gap of 0.52 between these two profiles (0.38 vs. 0.90) is doing exactly what it should. Every Studier song sits between 0.31–0.42 energy; every Workout song is between 0.82–0.96. The flag is positions four and five: Coffee Shop Stories (jazz, relaxed) and Porch Light (folk, sad) show up for the Studier not because they fit, but because their energy happens to be close to 0.38. Same thing on the Workout side — Strobe Garden (EDM) and Iron Curtain (metal) are not pop, but they're high energy, so once genre and mood bonuses are spent they're the next best thing the system can find. That's the system running out of relevant songs and defaulting to energy as a tiebreaker.
-
-**Why Gym Hero keeps showing up for Happy Pop users:** The system currently cares three times as much about intensity as anything else. Gym Hero energy is 0.93, and the pop/happy user wants 0.90 — a gap of 0.03 on a scale of zero to one. The system awards near-full points for that and has no way to know that "intense" and "happy" feel completely different to the listener. Mood is a checkbox; energy is a sliding scale — and after doubling the energy multiplier, the sliding scale wins most matchups where genre and mood are already settled.
+Energy runs the show. After bumping the weight to ×3.0, a perfect energy match alone (3.0 points) beats a perfect genre + mood match combined (2.75). So a metal song can land in a jazz listener's top 5 just because the energy is close — and the system has no idea that's wrong. On top of that, mood is all-or-nothing ("chill" and "relaxed" score zero against each other), and 14 of 16 genres only have one song, so once that genre bonus fires the rest of the list is just whatever's closest on energy.
 
 ---
 
-## Pair 2 — Late Night Studier vs. Sunday Morning Listener
+## Could your AI be misused, and how would you prevent that?
 
-**Studier top 5:** Focus Flow, Library Rain, Midnight Coding, Coffee Shop Stories, Porch Light  
-**Sunday Morning top 5:** Coffee Shop Stories, Focus Flow, Midnight Coding, Library Rain, Smoke & Strings  
-**Overlap:** 4 of 5 songs.
-
-Four of five songs overlap, but for completely different reasons. Coffee Shop Stories is rank four for the Studier — energy 0.37 is close to 0.38, no genre or mood bonus, just an energy coincidence — and rank one for the Sunday Morning Listener because jazz + relaxed fires both bonuses on top of that. Focus Flow is the reverse: rank one for the Studier (lofi + focused = full match), rank two for Sunday Morning with no genre or mood match at all, just a perfect energy of 0.40. Same vibe, completely different intent, and the system cannot tell the difference. After Coffee Shop Stories, the Sunday Morning list is just low-energy songs because there is only one jazz song in the catalog — the genre signal runs out and energy takes over.
+Honestly, the risk is low — it recommends songs from a fixed 19-song catalog, so the worst case is a bad playlist. The main guardrail is the 6-call iteration cap, which prevents someone from crafting inputs that make Claude loop forever and burn API credits. If this were scaled to a real catalog, the energy-dominant weights would need a serious rework — users would trust recommendations without realizing the system ran out of relevant songs three picks in.
 
 ---
 
-## Pair 3 — Workout User vs. Sunday Morning Listener
+## What surprised you while testing your AI's reliability?
 
-**Workout top 5:** Gym Hero, Storm Runner, Sunrise City, Strobe Garden, Iron Curtain  
-**Sunday Morning top 5:** Coffee Shop Stories, Focus Flow, Midnight Coding, Library Rain, Smoke & Strings  
-**Overlap:** None.
+Property-based testing caught things I never would have thought to check. Hypothesis sent `NaN` as an energy value and it sailed right through the clamping function — no unit test would think to try that. The other surprise was how good bad output looks. Two profiles with nearly identical energy but completely different genre/mood preferences got 4 of 5 songs in common, and you'd never notice without checking the score breakdowns.
 
-Clean separation. The 0.50 energy gap between these profiles is wide enough that no song can score well for both — every Workout song is above 0.82, every Sunday Morning song is below 0.46. This is the easy case and it works correctly. If you only tested this pair the system would look well-calibrated. Pair 2 is the one that reveals the real question: two users with nearly identical energy preferences but different identities ending up with near-identical playlists, and the system has no way to tell whether that overlap is appropriate or just a catalog gap.
+---
+
+## AI Collaboration
+
+I used Claude (via Kiro) for code generation, debugging, tests, and docs throughout the project.
+
+**Helpful:** AI suggested stress-testing the iteration cap by mocking Claude to always return `tool_use` and verifying the loop still stops at 6. My original plan was just checking the constant existed — the AI's version actually proves the guardrail works under adversarial conditions.
+
+**Flawed:** Early on, AI wanted to keep `pandas` and `streamlit` in `requirements.txt` "for future use" even though neither was imported anywhere. Dead dependencies confuse anyone setting up the project. I caught it and removed both.

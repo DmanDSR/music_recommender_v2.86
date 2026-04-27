@@ -7,7 +7,11 @@ VibeMatch is a content-based music recommender that scores 19 songs against a us
 1. **Demo mode** — runs three hardcoded user profiles and prints ranked playlists with score breakdowns.
 2. **Vibe Bot mode** — an interactive CLI where you describe an activity or mood in plain English (e.g., "study for finals", "power workout") and an AI agent builds you a curated 5-song playlist with explanations.
 
-The Vibe Bot uses an agentic workflow powered by the Claude API. Claude interprets your vibe, calls a `search_songs` tool backed by the existing scoring pipeline, reviews the results, optionally re-searches with different parameters, and writes a final playlist. The AI layer sits on top of the same algorithm that powers demo mode — it doesn't bypass the scoring system.
+The Vibe Bot runs on an agentic loop using the Claude API. You describe your vibe, Claude figures out what that means, hits a search_songs tool that's wired into the existing scoring pipeline, checks the results, and either refines the search or locks in a final playlist. It's just an AI layer on top of the same algorithm demo mode uses — the scoring system doesn't change.
+
+### Original Project
+
+This started as the **Music Recommender Simulation** from Modules 1-3 — a basic content-based recommender that scored songs against hardcoded user profiles using genre, mood, and energy matching, then printed ranked playlists. The original version had no AI, no interactivity, and no way to describe what you wanted in plain language. VibeMatch keeps that same scoring engine but adds the Vibe Bot on top, so now you can just say what you're doing and get a playlist back.
 
 **Course:** CodePath AI110 — Spring 2026
 **Language:** Python
@@ -125,6 +129,20 @@ python -m src.main --vibe --debug
 | "power workout, get me hyped" | edm or pop / euphoric or intense / high energy |
 | "lazy Sunday morning with coffee" | jazz or ambient / relaxed / low energy |
 | "driving at night" | synthwave / moody / medium-high energy |
+
+### Sample Interaction
+
+Here's what it actually looks like when you run the Vibe Bot. You type a vibe, Claude interprets it, calls the scoring pipeline behind the scenes, and comes back with a curated playlist and explanations for each pick:
+
+![Vibe Bot in action — example input and AI-generated playlist](assets/Vibe_bot_working.png)
+
+The screenshots below show additional runs with different vibes. Each one goes through the same flow — Claude reads your input, decides on genre/mood/energy parameters, searches the catalog, and writes up the results:
+
+![Demo output example 1](assets/Vibe_bot_working_2.png)
+
+![Demo output example 2](<assets/Vibe_bot_working_3_need_more_info.png>)
+
+![Demo output example 3](<assets/Vibe_bot_working_4.png>)
 
 ---
 
@@ -281,6 +299,26 @@ Property-based tests use the `hypothesis` library to generate hundreds of random
 
 ---
 
+## Design Decisions
+
+A few choices worth calling out:
+
+- **Energy at 3× weight, genre cut in half.** The original weights treated genre and energy about equally, but that felt wrong — two songs in the same genre can feel completely different if one is mellow and the other is intense. Energy is also the only continuous signal, so it can actually differentiate between songs instead of just giving a flat bonus. Doubling it and halving genre made the rankings feel more natural for most profiles, even though it introduced the energy-dominance tradeoff where genre-foreign songs can sneak into the top 5.
+
+- **Mood is binary (match or miss).** Ideally "chill" and "relaxed" would get partial credit, but building a mood similarity matrix felt like scope creep for a 19-song catalog. It's the most obvious thing to fix if the catalog grows.
+
+- **6-call iteration cap on the Vibe Bot.** Claude sometimes wants to re-search with different parameters, which is fine — that's the whole point of the agentic loop. But without a cap, a bad prompt could burn through API credits. Six calls is enough for Claude to search twice and still write a full response, and in practice most sessions finish in 2-3.
+
+- **Tool-use instead of prompt-only.** The alternative was to dump the entire song catalog into the prompt and let Claude pick from it. Tool-use keeps the scoring logic in Python where it's testable, and it means Claude works with the same algorithm demo mode uses — no separate ranking path to maintain.
+
+---
+
+## Testing Summary
+
+42 tests, all passing. The unit tests on the scoring pipeline caught real bugs early — the energy proximity formula had an off-by-one in the weight multiplication during development that the `test_score_song_perfect_match` test flagged immediately. The property-based tests were the most valuable surprise: Hypothesis found that `NaN` energy values passed through the clamping function unchecked, which led to adding explicit bounds checking in the search handler. The mocked agentic loop tests gave confidence that error handling works without burning API credits on every test run. The main gap is that there are no integration tests with the real Claude API — every Vibe Bot test uses mocks, so if Anthropic changes their response format, the tests won't catch it.
+
+---
+
 ## Known Biases and Limitations
 
 - **Energy dominance** — at ×3.0, a perfect energy match (3.0 points) outscores a combined genre + mood match with no energy overlap (2.75 points). Songs in the wrong genre can rank high if their energy is close.
@@ -316,13 +354,3 @@ Read the full model card: [**model_card.md**](model_card.md)
 The biggest learning moment was doubling energy's weight and watching one number change break the whole recommendation logic. A perfect energy match (3.0 points) now beats a perfect genre + mood match (2.75), and that wasn't obvious until the numbers were run. The output still looks legitimate — a user seeing the top five results would have no idea the system ran out of relevant songs at position four and started defaulting to whatever is closest on energy.
 
 Building this changed how I think about real recommenders. The scoring rules are simple, but the interactions between weights create emergent behavior that's hard to predict without testing. A system that looks well-calibrated on one pair of profiles can completely fail on another.
-
----
-
-![alt text](image.png)
-
-![alt text](<Screenshot 2026-04-14 002729.png>)
-
-![alt text](<Screenshot 2026-04-14 002714.png>)
-
-![alt text](<Screenshot 2026-04-14 002658.png>)
